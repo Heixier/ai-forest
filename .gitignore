@@ -1,0 +1,7 @@
+.vscode/
+rpg/__pycache__/
+rpg/arcade
+rpg/pygame
+rpg/arcade.code-workspace
+rpg/console/__pycache__/
+rpg/console/gamelog.txt
