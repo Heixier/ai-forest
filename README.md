@@ -1,4 +1,4 @@
-# The Rainforest
+# The AI Forest
 A simple text-based game with various character classes and strategic gameplay.  
 Your goal is to clear as many stages as possible.
 
