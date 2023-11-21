@@ -1,6 +1,8 @@
+from time import sleep
 import rpg_modules as rm
 import rpg_colours as rc
-from time import sleep
+import screens
+
 
 # Player move selection
 class ManualTargetSelect:
@@ -123,7 +125,7 @@ ATK: {rc.LIGHT_RED}{int(v.attack)}{rc.END}")
         # If move is an AOE move, select all targets
         if aoe:
             self.selected_targets: dict = self.valid_targets
-            print(f"AOE move selected!")
+            print(f"{rc.LIGHT_GREEN}AOE{rc.DARK_GRAY} move selected!{rc.END}")
         
         else:
             target_selection = rm.int_checker(query = f"\nChoose target to use {rc.LIGHT_CYAN}{move.__name__}{rc.END} on: ")
@@ -168,7 +170,7 @@ class ActionSelect:
             attack = ["a", "attack", ""]
             
             match action:
-                case i if i in attack:
+                case c if c in attack:
                     self.attack()
                     break
                 
@@ -187,8 +189,11 @@ class ActionSelect:
                     rm.stat_printer(self.attackers, self.targets)
                 
                 case "help":
-                    game_help()
-
+                    screens.game_help()
+                    
+                case c if c == "movelist" or c == "moves":
+                    game_movelist()
+                    
                 case _:
                     print(f"{rc.DARK_GRAY}Invalid command! Type \"{rc.RED}help{rc.DARK_GRAY}\" for commands.{rc.END}")
           
@@ -201,112 +206,183 @@ class ActionSelect:
             manual_select.selected_move(v)
         
         self.selecting = False
+
+class MainMenu:
+    """Main menu class\n
+    :param Int ptz: default player team size
+    :param Int atz: ai team size
+    :param Bool atzs: whether the ai team size was manually set
+    :param Str difficulty: current difficulty
+    :param List difficulties: list of available difficulties
+    """
+    def __init__(self, ptz: int, atz: int, atzs: False, difficulty = "easy", difficulties = list):
+        self.default_player_team_size = ptz
+        self.ai_team_size = atz
+        self.ai_team_size_set = atzs
+        self.difficulty = difficulty
+        self.difficulties = difficulties
+
+    def start_screen(self):
+        """Main menu screen"""
         
-def main_menu():
-    """Main menu screen"""
+        self.start_game = False
+        while not self.start_game:
+
     
-    print(f"\n\
+            print(f"\n\
 {rc.LIGHT_CYAN}Main Menu{rc.END}\n\n\
 > {rc.LIGHT_GREEN}Start{rc.END}\n\
 > {rc.LIGHT_GRAY}Settings{rc.END}\n"
     )
 
-    rm.cursor()
-    action = input(f"{rc.LIGHT_CYAN}Choose option:{rc.END} ").casefold().strip()
-    rm.cursor(False)
+            rm.cursor()
+            action = input(f"{rc.LIGHT_CYAN}Choose option:{rc.END} ").casefold().strip()
+            rm.cursor(False)
 
-    start = ["s", "start", "p", "play", ""]
-    settings = ["settings", "setting"]
-    match action:
-        case i if i in start:
-            selected = "start"
-            return selected
+            start = ["s", "start", "p", "play", ""]
+            settings = ["settings", "setting"]
+            match action:
+                case c if c in start:
+                    self.start_game = True
 
-        case i if i in settings:
-            return "settings"
-    
-        case "exit":
-            print(f"{rc.DARK_GRAY}You cannot escape the forest...{rc.END} ")
-            sleep(1)
-            return action
-
-        case _:
-            print(f"{rc.LIGHT_RED}{action} is not a valid option.{rc.END}")
+                case c if c in settings:
+                    self.settings()
             
-    sleep(0.8)
+                case "exit":
+                    print(f"{rc.DARK_GRAY}You cannot escape the forest...{rc.END} ")
+                    sleep(1)
+                    return action
 
-def game_help():
-    """Prints game help"""
-    
-    print(f"\n\
-{rc.LIGHT_WHITE}HELP MENU{rc.END}\n\n\
-{rc.LIGHT_RED}attack/a{rc.DARK_GRAY} - {rc.END}choose attack\n\
-{rc.LIGHT_BLUE}auto{rc.DARK_GRAY} - {rc.END}automatically attack\n\
-{rc.BROWN}stats{rc.DARK_GRAY} - {rc.END}displays stats\n\
-{rc.LIGHT_GREEN}help{rc.DARK_GRAY} - {rc.END}displays this screen\
-")
+                case _:
+                    print(f"{rc.LIGHT_RED}{action} is not a valid option.{rc.END}")
+                    sleep(0.8)
 
-def settings(
-    default_player_team_size: int,
-    ai_team_size: int,
-    difficulties: list,
-    difficulty = "easy"
-):
-    """Game settings screen
+        
+    def settings(self):
+        """Game settings screen
 
-    Args:
-        default_player_team_size (int): Default number of players (only for new game)
-        ai_team_size (int): AI team size
-        difficulties (list): List of available difficulties
-        difficulty (str, optional): Current difficulty. Defaults to "easy".
-    """
+        Returns:
+            int: default player team size
+            int: ai team size
+            bool: whether the ai team size was set
+            str: difficulty
+        """
     
-    ai_team_size_set = False
-    
-    settings_done = False
-    while not settings_done:
-        print(f"\n\
+        settings_done = False
+        while not settings_done:
+            print(f"\n\
 Current settings:\n\n\
 {rc.LIGHT_CYAN}{rc.UNDERLINE}Team Size{rc.END}\n\n\
-{rc.DARK_GRAY}>{rc.END} {rc.LIGHT_CYAN}Player{rc.END}: {rc.LIGHT_GREEN}{default_player_team_size}{rc.END}\n\
-{rc.DARK_GRAY}>{rc.END} {rc.LIGHT_CYAN}AI{rc.END}: {rc.LIGHT_GREEN}{ai_team_size}{rc.END}\n\n\
-{rc.DARK_GRAY}>{rc.END} {rc.UNDERLINE}D{rc.END}ifficulty: {rc.LIGHT_GREEN}{difficulty.capitalize()}{rc.END}\n\n\
+{rc.DARK_GRAY}>{rc.END} {rc.LIGHT_CYAN}Player{rc.END}: {rc.LIGHT_GREEN}{self.default_player_team_size}{rc.END}\n\
+{rc.DARK_GRAY}>{rc.END} {rc.LIGHT_CYAN}AI{rc.END}: {rc.LIGHT_GREEN}{self.ai_team_size}{rc.END}\n\n\
+{rc.DARK_GRAY}>{rc.END} {rc.UNDERLINE}D{rc.END}ifficulty: {rc.LIGHT_GREEN}{self.difficulty.capitalize()}{rc.END}\n\n\
 {rc.DARK_GRAY}Press {rc.RED}enter{rc.DARK_GRAY} or type {rc.RED}\"exit\"{rc.DARK_GRAY} to exit.{rc.END}")
 
-        rm.cursor()
-        setting = input(f"Choose option: ").casefold().strip()
-        rm.cursor(False)
+            rm.cursor()
+            setting = input(f"Choose option: ").casefold().strip()
+            rm.cursor(False)
 
-        setting_exit = ["back", "exit", "done", ""]
-        player_team_size_input = ["player", "player team", "player team size"]
-        ai_team_size_input = ["ai", "ai team", "ai team size"]
-        difficulty_input = ["d", "diff", "difficulty"]
-        match setting:
-            case i if i in setting_exit:
-                settings_done = True
-        
-            case i if i in player_team_size_input:
-                default_player_team_size = rm.int_checker(query = f"{rc.LIGHT_CYAN}Player team size:{rc.END} {rc.LIGHT_GREEN}")
-                print(f"{rc.END}", end = "")
-            
-            case i if i in ai_team_size_input:
-                ai_team_size = rm.int_checker(query = f"{rc.LIGHT_CYAN}AI team size:{rc.END} {rc.LIGHT_GREEN}")
-                print(f"{rc.END}", end = "")
-                ai_team_size_set = True
-        
-            case i if i in difficulty_input:
-                chosen_difficulty = input(f"Choose difficulty: {rc.LIGHT_GREEN}").casefold().strip()
-                print(f"{rc.END}", end = "")
+            setting_exit = ["back", "exit", "done", ""]
+            player_team_size_input = ["player", "player team", "player team size"]
+            ai_team_size_input = ["ai", "ai team", "ai team size"]
+            difficulty_input = ["d", "diff", "difficulty"]
+            match setting:
+                case c if c in setting_exit:
+                    settings_done = True
                 
-                if chosen_difficulty not in difficulties:
-                    print(f"{rc.LIGHT_RED}{chosen_difficulty} is not a valid difficulty.{rc.END}")
-                    sleep(0.8)
+                case "start":
+                    settings_done = True
+                    self.start_game = True
+            
+                case c if c in player_team_size_input:
+                    self.default_player_team_size = rm.int_checker(query = f"{rc.LIGHT_CYAN}Player team size:{rc.END} {rc.LIGHT_GREEN}")
+                    print(f"{rc.END}", end = "")
+                
+                case c if c in ai_team_size_input:
+                    self.ai_team_size = rm.int_checker(query = f"{rc.LIGHT_CYAN}AI team size:{rc.END} {rc.LIGHT_GREEN}")
+                    print(f"{rc.END}", end = "")
+                    self.ai_team_size_set = True
+            
+                case c if c in difficulty_input:
+                    chosen_difficulty = input(f"Choose difficulty: {rc.LIGHT_GREEN}").casefold().strip()
+                    print(f"{rc.END}", end = "")
                     
-                else:
-                    difficulty = chosen_difficulty
+                    if chosen_difficulty not in self.difficulties:
+                        print(f"{rc.LIGHT_RED}{chosen_difficulty} is not a valid difficulty.{rc.END}")
+                        sleep(0.8)
+                        
+                    else:
+                        self.difficulty = chosen_difficulty
+                    
+                case _:
+                    print(f"{rc.LIGHT_RED}{setting} is not a valid setting.{rc.END}")
+                    sleep(0.8)     
+                
+        return self.default_player_team_size, self.ai_team_size, self.ai_team_size_set, self.difficulty
+
+def game_movelist():
+    """Choose which movelist to print"""
+    
+    char_class = input(f"\n{rc.DARK_GRAY}Which class's movelist would you like to check?{rc.END} ").casefold().strip()
+    
+    match char_class:
+        
+        case c if c == "w" or c == "warrior":
+            print(f"\n\
+{rc.LIGHT_BLUE}Warrior{rc.END}:\n\n\
+{rc.LIGHT_RED}Flurry: {rc.DARK_GRAY}Single target attack that hits 3-5 times for 30% damage each, then cloaks{rc.END}\n\
+{rc.LIGHT_RED}Neutralise: {rc.DARK_GRAY}Armour-piercing attack that ignores 50% defence but does 90% damage{rc.END}\n\
+{rc.LIGHT_RED}Rage: {rc.DARK_GRAY}Sacrifice 10% health to deal double damage{rc.END}\n\
+{rc.LIGHT_RED}Execute: {rc.DARK_GRAY}Deals more damage the lower the enemy health is (cannot crit)\n\
+{rc.LIGHT_RED}Sweep: {rc.DARK_GRAY}Leg sweep all enemies and deal damage based on their defence (cannot crit)")
+        
+        case c if c == "t" or c == "tank":
+            print(f"\n\
+{rc.LIGHT_BLUE}Tank{rc.END}:\n\n\
+{rc.LIGHT_RED}Equaliser: {rc.DARK_GRAY}Deals damage based on the difference between the character's attack and the enemy's defence{rc.END}\n\
+{rc.LIGHT_RED}RecklessCharge: {rc.DARK_GRAY}A risky but powerful attack that has a 20% chance to miss{rc.END}\n\
+{rc.LIGHT_GREEN}Barricade: {rc.DARK_GRAY}Gives all allies the shielded state, reducing their next damage received{rc.END}")
+            
+        case c if c == "c" or c == "cleric":
+            print(f"\n\
+{rc.LIGHT_BLUE}Cleric{rc.END}:\n\n\
+{rc.LIGHT_RED}Lightning: {rc.DARK_GRAY}Moderate lightning spell that hits all targets with 85% damage (cannot crit){rc.END}\n\
+{rc.LIGHT_GREEN}Restoration: {rc.DARK_GRAY}Heals and revives an ally with with magic{rc.END}\n\
+{rc.LIGHT_RED}Curse: {rc.DARK_GRAY}Uses the enemy's own attack to deal damage (cannot crit){rc.END}\n\
+{rc.LIGHT_PURPLE}PoisonCloud: {rc.DARK_GRAY}Poisons all enemies for 2 rounds")
+        
+        case _:
+            print(f"{rc.LIGHT_RED}{char_class}{rc.DARK_GRAY} is not a valid class!{rc.END}")
+
+class ExitMenu:
+    """Exit menu screen that checks for player confirmation before quitting"""
+    def __init__(self):
+        self.continue_confirmed = False
+    
+    def exit_select(self):
+        if not self.continue_confirmed:
+            exit_input = input(f"{rc.LIGHT_GREEN}Continue?{rc.DARK_GRAY} Press any key to exit or {rc.LIGHT_GREEN}\"y\"{rc.DARK_GRAY} to continue.\n{rc.END}").casefold().strip()
+            yes = ["y", "yes"]
+            
+            match exit_input:
+                case y if y in yes:
+                    self.continue_confirmed = True
+                
+                case _:
+                    self.confirm_select()
+        
+        if self.continue_confirmed:
+            return True
+        else:
+            return False
+
+    def confirm_select(self):
+        confirm_input = input(f"{rc.LIGHT_RED}ARE YOU SURE? {rc.DARK_GRAY}Type \"n\" to go back.{rc.END}\n").casefold().strip()
+        no = ["n", "no"]
+        
+        match confirm_input:
+            case n if n in no:
+                self.exit_select()
                 
             case _:
-                print(f"{rc.LIGHT_RED}{setting} is not a valid setting.{rc.END}")
-                sleep(0.8)     
-            
-    return default_player_team_size, ai_team_size, ai_team_size_set, difficulty
+                print(f"{rc.LIGHT_WHITE}Thanks for playing!{rc.END}")

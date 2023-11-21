@@ -5,12 +5,12 @@ from datetime import datetime
 from time import sleep
 import arcade
 import units
-import rpg_sound
+import rpg_sound as rs
 import rpg_colours as rc
-import menus
+import rpg_saveload as rsl
 
 #speed (s), delay (s), sound_effect (int)
-slower_print = (0.7, 0.2, 2, 1 * rpg_sound.volume)
+slower_print = (0.7, 0.2, 2, 1 * rs.volume)
 
 # PRINT THINGS
 
@@ -60,9 +60,14 @@ def top_bar(func):
         func(*args, **kwargs)
         
     return wrapper
-    
-# Shows or hides the cursor    
+     
 def cursor(show = True):
+    """Set cursor visibility
+
+    Args:
+        show (bool, optional): Show or hide the cursor. Defaults to True.
+    """
+    
     if show:
         print(f"{rc.SHOW}", end = "")
     else:
@@ -84,26 +89,26 @@ def slow_print(s, speed = 0.01, delay = 0.2, sound = 1, volume = 1):
             sound_delay_counter += 1
             
             if sound_delay_counter >= 3:
-                arcade.play_sound(rpg_sound.text, 1.2 * rpg_sound.volume)
+                arcade.play_sound(rs.text, 1.2 * rs.volume)
                 # Resets the counter
                 sound_delay_counter = 0
         
         elif sound == 2:
-            arcade.play_sound(rpg_sound.text_2, 0.5 * rpg_sound.volume)
+            arcade.play_sound(rs.text_2, 0.5 * rs.volume)
         
         sleep(speed)
 
     sleep(delay)
     sys.stdout.write("\n")
 
-# Prints stats of both teams
 @separate
 def stat_printer(players: dict, enemies: dict, slow = False, intro = False):
+    """Prints stats of two teams"""
 
     for k, v in players.items():
         if v.alive is True:
             if intro:
-                arcade.play_sound(rpg_sound.ready, 0.1 * rpg_sound.volume)
+                arcade.play_sound(rs.ready, 0.1 * rs.volume)
                 print(f"{rc.LIGHT_GREEN}Human {k}:{rc.END}")
                 sleep(0.1)
             if slow:
@@ -126,7 +131,7 @@ def stat_printer(players: dict, enemies: dict, slow = False, intro = False):
     for k, v in enemies.items():
         if v.alive is True:
             if intro:
-                arcade.play_sound(rpg_sound.ready, 0.1 * rpg_sound.volume)
+                arcade.play_sound(rs.ready, 0.1 * rs.volume)
                 print(f"{rc.LIGHT_RED}AI {k}:{rc.END}")
                 sleep(0.1)
                 
@@ -158,11 +163,13 @@ def int_checker(input_query = None, query = False):
             print(f"{rc.RED}ERROR: {rc.DARK_GRAY}Please enter an integer.{rc.END} ")
 
 def check_dead(alive_members: dict):
+    """Checks if previously alive units have been killed, then prints a death message"""
+    
     for _, v in alive_members.items():
         if not v.alive:
-            arcade.play_sound(rpg_sound.death, 1 * rpg_sound.volume)
+            arcade.play_sound(rs.death, 1 * rs.volume)
             slow_print(f"{v.name} {rc.DARK_GRAY}has been {rc.LIGHT_RED}defeated... {rc.END}")
-            sleep(0.8)
+            sleep(0.6)
 
 # CREATE THINGS
 
@@ -278,111 +285,9 @@ def char_create(team_size: int, team: str):
 #         \    /=\  /         ||  |---'\  \
 #    jgs  /____)/____)       (_(__|   ((__|
 
-def load_game(player_name: str):
-    """_summary_
-
-    Args:
-        player_name (str): Name of the player
-
-    Returns:
-        tuple: created_chars (dict), highest_stage (int), loaded_stage (int)
-    """
-    try:
-        with open(f"saves/{player_name}.txt", "r") as f:
-            
-            created_chars = {}
-            
-            # Helps us number our characters
-            char_count = 0
-            
-            # For each character in the file
-            for line in f:
-                char_count += 1
-                loaded_values = line.split("//")
-
-                # Initialising characters
-                character = class_creator(loaded_values[2], loaded_values[3], "Players")
-
-                # Loading the rest of our character attributes
-                character.max_health = float(loaded_values[4])
-                character.health = int(character.max_health)  # fully heals character
-                character.attack = float(loaded_values[5])
-                character.defence = float(loaded_values[6])
-                character.exp = int(loaded_values[7])
-                character.rank: int = int(loaded_values[8])
-                character.prestige = int(loaded_values[9])
-                character.total_rank = int(loaded_values[10])
-
-                # Resets character states
-                character.hidden = False
-                character.alive = True
-                
-                # Sets character max exp back
-                character.max_exp = int(units.BASE_MAX_EXP * units.EXP_SCALING ** (character.total_rank - 1))
-                
-                # Adds character into created characters list
-                created_chars[char_count] = character
-                
-                # Loads the highest stage
-                highest_stage = int(loaded_values[1])
-                
-                # Load the last saved stage
-                loaded_stage = int(loaded_values[0])
-            
-            slow_print(f"{rc.LIGHT_GREEN}{char_count} character(s){rc.DARK_GRAY} detected for {rc.LIGHT_CYAN}{player_name}{rc.DARK_GRAY}. Loading... {rc.END}")
-                    
-        return created_chars, highest_stage, loaded_stage
-    
-    except FileNotFoundError:
-        slow_print(f"{rc.DARK_GRAY}No save file detected for {rc.BROWN}{player_name}{rc.DARK_GRAY}{rc.END}\nStarting new game!", sound = 0)
-        sleep(0.5)
-        menus.game_help()
-        sleep(1.5)
-        
-    except:
-        print(f"{rc.RED}Error while loading {player_name}. RZ probably broke the save system again{rc.END}")
-        sleep(0.8)
-    
-# Select stage
-def stage_load(loaded_stage: int, highest_stage: int):
-    """_summary_
-
-    Args:
-        loaded_stage (int): Previous stage recorded in game file
-        highest_stage (int): Highest stage recorded in game file
-
-    Returns:
-        int: Stage to set game to
-    """
-
-    slow_print(f"Highest stage: {highest_stage}")
-
-    stage_load_check = input(f"Continue from Stage {loaded_stage}? ").casefold().strip()
-    
-    try:
-        stage_load_check = int(stage_load_check)
-        
-    except:
-        pass
-    
-    if isinstance(stage_load_check, int):
-        stage = stage_load_check
-        
-    elif stage_load_check == "yes" or stage_load_check == "y" or stage_load_check == "":
-        stage = loaded_stage
-
-    else:
-        stage = int_checker(query = f"Which {rc.YELLOW}stage{rc.END} would you like to load? ")
-        if stage <= 0:
-            slow_print(f"{rc.DARK_GRAY}You cannot set {rc.RED}negative stage numbers.{rc.END} Defaulting to {rc.YELLOW}stage 1{rc.END}!")
-            stage = 1
-
-    slow_print(f"{rc.DARK_GRAY}Initialising {rc.LIGHT_BLUE}Stage {stage}... {rc.END}")
-    sleep(0.8)
-    
-    return stage
-
 def difficulty_config(difficulty: str):
+    """Configures difficulty scaling values based on difficulty"""
+    
     if difficulty == "easy":
         d_add = 0
         d_mult = 1
@@ -420,7 +325,7 @@ def auto_setup():
     print(f"{rc.CYAN}")
     slow_print("." * 3, 1, 0.25, 2)
     print(f"{rc.END}")
-    arcade.play_sound(rpg_sound.auto, 0.5 * rpg_sound.volume)
+    arcade.play_sound(rs.auto, 0.5 * rs.volume)
     sleep(1.5)
     slow_print(f"Success!\n")
     
@@ -437,8 +342,9 @@ def ai_modify(stage: int, team: dict, d_add = 0, d_mult = 1):
     """
     
     for _, v in team.items():
-        v.rank_up(int((stage - 1 + d_add) * d_mult), False)
-        v.max_exp = int(units.BASE_MAX_EXP * units.EXP_SCALING ** (v.total_rank - 1))
+        if stage > 1:
+            v.rank_up(int((stage - 2 + d_add) * d_mult), False)
+            v.max_exp = int(units.BASE_MAX_EXP * units.EXP_SCALING ** (v.total_rank - 1))
         
         # Fully heal character after ranking up
         v.health = v.max_health
@@ -463,18 +369,18 @@ def auto_target(attackers: dict, targets: dict):
         raise ValueError(f"If you reach this error, it means the world is about to endc")
     
 def status_check(team: dict):
-    """Updates status of characters in a team
+    """Updates status of characters in a team such as doing poison tick etc.
 
     Args:
         team (dict): Dictionary of objects
     """
     for _, v in team.items():
         if v.poisoned > 0:
-            arcade.play_sound(rpg_sound.poison)
+            arcade.play_sound(rs.poison)
             print(f"\
-{v.name}{rc.DARK_GRAY} has lost {rc.LIGHT_RED}{int(v.health * 0.1)}{rc.DARK_GRAY} \
+{v.name}{rc.DARK_GRAY} has lost {rc.LIGHT_RED}{int(v.health * 0.2)}{rc.DARK_GRAY} \
 health from {rc.LIGHT_PURPLE}poison{rc.DARK_GRAY}...{rc.END}")
-            v.health *= 0.9
+            v.health *= 0.8
             v.death_check()
             v.poisoned -= 1
             sleep(0.4)
@@ -489,3 +395,20 @@ for {rc.LIGHT_PURPLE}{v.poisoned}{rc.DARK_GRAY} \
 more turn(s)!{rc.END}\n")
         
         sleep(0.8)
+        
+def player_victory(player_name: str, players: dict, stage: int, highest_stage: int):
+    """Announces player victory and saves the game"""
+
+    arcade.play_sound(rs.win, 0.5 * rs.volume)
+        
+    # Saves highest stage
+    stage += 1
+    if highest_stage < stage:
+        highest_stage = stage
+            
+    # Saves the game
+    rsl.save_game(player_name, players, stage, highest_stage)
+    
+    victory_message = f"{rc.LIGHT_GREEN}Player wins!{rc.END}"
+    slow_print(f"\n{victory_message}")
+    return victory_message

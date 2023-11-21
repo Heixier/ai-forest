@@ -1,0 +1,3 @@
+stage: 45//highest: 191//class: Warrior//name: Mizuki//health: 3532//base attack: 20//attack: 918.8874712469229//base defence: 10//defence: 97.0637632012666//exp: 975//rank: 2//prestige: 18//level: 181//check: 14
+stage: 45//highest: 191//class: Tank//name: Kanade//health: 5992//base attack: 10//attack: 435.85894597340365//base defence: 15//defence: 311.0418579441549//exp: 584//rank: 2//prestige: 18//level: 181//check: 14
+stage: 45//highest: 191//class: Cleric//name: Ena//health: 1769//base attack: 25//attack: 1097.8221969332023//base defence: 5//defence: 68.13756473541059//exp: 631//rank: 3//prestige: 18//level: 182//check: 14

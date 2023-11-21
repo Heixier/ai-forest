@@ -3,7 +3,7 @@ from time import sleep
 import arcade
 import rpg_modules as rm
 import rpg_colours as rc
-import rpg_sound
+import rpg_sound as rs
 
 #PARAMETERS
 classes = ["Warrior", "Tank", "Cleric"]
@@ -78,14 +78,16 @@ def class_filter(input: str):
         .strip()\
         .capitalize()
 
-    if input == "W":
-        input = "Warrior"
+    match input:
         
-    elif input == "T":
-        input = "Tank"
-    
-    elif input == "C":
-        input = "Cleric"
+        case "W":
+            input = "Warrior"
+            
+        case "T":
+            input = "Tank"
+            
+        case "C":
+            input = "Cleric"
         
     if input not in classes:
         default = random.choice(classes)
@@ -187,7 +189,7 @@ class unit:
         
         # This parameter allows us to quietly level up AI at the start
         if announce:  
-            arcade.play_sound(rpg_sound.level_up, 1 * rpg_sound.volume)
+            arcade.play_sound(rs.level_up, 1 * rs.volume)
             rm.slow_print(f"\
 ATK {rc.LIGHT_RED}{int(old_attack)}{rc.DARK_GRAY} -> {rc.LIGHT_RED}{int(self.attack)}{rc.END} \
 DEF {rc.YELLOW}{int(old_defence)}{rc.DARK_GRAY} -> {rc.YELLOW}{int(self.defence)}{rc.END}!", 0.005, 0.2, 0)
@@ -288,7 +290,7 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
             name = name[:8]
 
         stat_list = f"\
-[ {rc.LIGHT_BLUE}{self.char_class:^7}{rc.END} \
+{rc.LIGHT_WHITE}[ {rc.LIGHT_BLUE}{self.char_class:^7}{rc.END} \
 {name:^8} >  \
 {rc.DARK_GRAY}HP: {rc.LIGHT_GREEN}{int(self.health):>5}{rc.DARK_GRAY}/{int(self.max_health):<5}{rc.END} \
 {rc.DARK_GRAY}ATTACK: {rc.LIGHT_RED}{int(self.attack):<5}{rc.END} \
@@ -300,12 +302,12 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
 
         if self.prestige == 0:
             if slow:
-                rm.slow_print(stat_list, 0.003, 0.4, 0, 0.8)
+                rm.slow_print(stat_list, 0.001, 0.4, 0, 0.8)
             else:
                 print(stat_list)
         else:
             if slow:
-                rm.slow_print(f"{stat_list} {rc.DARK_GRAY}{rc.LIGHT_WHITE}{self.prestige}{rc.END}", 0.003, 0.4, 0, 0.8)
+                rm.slow_print(f"{stat_list} {rc.DARK_GRAY}{rc.LIGHT_WHITE}{self.prestige}{rc.END}", 0.001, 0.4, 0, 0.8)
             else:
                 print(f"{stat_list} {rc.DARK_GRAY}{rc.LIGHT_WHITE}{self.prestige}")
 
@@ -342,7 +344,7 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
             bool: Whether the attack crit, int: Damage after checking for crit
         """
         
-        if random.randrange(CRIT_CHANCE) == 0:
+        if random.randrange(chance) == 0:
             damage *= CRIT_MULTIPLIER
             return True, int(damage)
         
@@ -355,8 +357,8 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
                   target: object, 
                   target_defence: int,
                   sound_count: int = 1, 
-                  sound_effect = rpg_sound.sword_attack,
-                  volume: float = 0.8 * rpg_sound.volume
+                  sound_effect = rs.sword_attack,
+                  volume: float = 0.8 * rs.volume
                   ):
         """Does basic damage calculation against another unit
 
@@ -364,8 +366,8 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
             damage (int): How much damage we're trying to deal
             target_health (object): The target object
             sound_count (int, optional): Number of times to play attack sound. Defaults to 1.
-            sound_effect (object, optional): Attack sound. Defaults to rpg_sound.sword_attack.
-            volume (float, optional): Volume of the sound. Defaults to 0.8 * rpg_sound.volume.
+            sound_effect (object, optional): Attack sound. Defaults to rs.sword_attack.
+            volume (float, optional): Volume of the sound. Defaults to 0.8 * rs.volume.
 
         Returns:
             tuple: Final damage (int), Target remaining health (float)
@@ -378,8 +380,8 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
         # If character is shielded, block 75% damage
         if target.shielded:
             final_damage /= 4
-            arcade.play_sound(rpg_sound.shield_broken)
-            print(f"{target.name} has been shielded for {rc.LIGHT_RED}{int(final_damage)}{rc.END} damage!")
+            arcade.play_sound(rs.shield_broken)
+            print(f"{target.name}'s shield reduces the next attack to {rc.LIGHT_RED}{int(final_damage)}{rc.END} damage!")
             sleep(0.2)
             target.shielded = False
         
@@ -392,10 +394,11 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
                 else:
                     final_damage = 1
                 
-                arcade.play_sound(rpg_sound.cloak_miss)
-                print(f"{target.name} barely avoided the attack and took only {rc.LIGHT_RED}{final_damage}{rc.END} damage!")
+                arcade.play_sound(rs.cloak_miss)
+                print(f"{target.name} set up a decoy for {rc.LIGHT_GREEN}{final_damage}{rc.END} health!")
                 sleep(0.2)
             
+            print(f"{rc.DARK_GRAY}{target.name} has been uncloaked!{rc.END}")
             target.cloaked = False
         
         updated_target_health = target.health - final_damage
@@ -478,7 +481,7 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
         
         # Checks if target has been revived
         if not target.alive:
-            arcade.play_sound(rpg_sound.revive)
+            arcade.play_sound(rs.revive)
             sleep(0.2)
             rm.slow_print(f"{rc.LIGHT_GREEN}{target.name}{rc.LIGHT_WHITE} has been revived!{rc.END}")
             sleep(0.5)
@@ -504,7 +507,7 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
             Checks if the move is hostile, aoe, or both
         """
         
-        attack_sound = rpg_sound.sword_attack
+        attack_sound = rs.sword_attack
         damage_range = (-5, 10)
         
         hostile = True
@@ -514,7 +517,7 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
         if target:
             
             # This randomises the damage a bit according to the task
-            damage = self.attack + random.randrange(*damage_range)
+            damage = self.attack + random.randint(*damage_range)
             
             # In case damage is negative because Tanks can hit negative with this damage range
             if damage < 0:
@@ -524,14 +527,14 @@ HEALTH {rc.LIGHT_GREEN}{int(old_health)}{rc.DARK_GRAY} -> {rc.LIGHT_GREEN}{int(s
             
             # Change our attack sound if crit
             if crit_success:
-                attack_sound = rpg_sound.dagger_attack
+                attack_sound = rs.dagger_attack
                 
             # 5% chance to miss
             if random.randrange(20) == 0:
                 damage = 0
             
             final_damage, target.health = self.do_damage(damage, target, target.defence, sound_effect = attack_sound)
-            rm.slow_print(f"\n{self.name} hits {target.name} with {rc.LIGHT_RED}{damage}{rc.END} damage!")
+            rm.slow_print(f"{self.name} hits {target.name} with {rc.LIGHT_RED}{damage}{rc.END} damage!")
             
             if crit_success:
                 rm.slow_print(f"{rc.YELLOW}Critical {rc.LIGHT_WHITE}hit!{rc.END}")
@@ -555,7 +558,7 @@ class Warrior(unit):
     def __init__(self, name, team):
         super().__init__(name, team)
         self.char_class = "Warrior"
-        self.attack, self.defence = random.randrange(*W_BASE_ATK), random.randrange(*W_BASE_DEF)
+        self.attack, self.defence = random.randint(*W_BASE_ATK), random.randint(*W_BASE_DEF)
         self.base_attack, self.base_defence = self.attack, self.defence
         
         # Character movelist
@@ -570,7 +573,7 @@ class Warrior(unit):
     def DaggerSpray(self: object, target: object):
         """Single target attack that hits 3-5 times for 30% damage each, then cloaks"""
     
-        attack_sound = rpg_sound.dagger_attack
+        attack_sound = rs.dagger_attack
         
         hostile = True
         aoe = False
@@ -584,7 +587,7 @@ class Warrior(unit):
             
             # Change our attack sound if crit
             if crit_success:
-                attack_sound = rpg_sound.dagger_attack
+                attack_sound = rs.dagger_attack
             
             final_damage, target.health = self.do_damage(damage, target, target.defence, hit_count, attack_sound, 1.2)
             rm.slow_print(f"Hit {hit_count} times for {rc.LIGHT_RED}{int(damage)}{rc.END} total damage!")
@@ -594,10 +597,11 @@ class Warrior(unit):
                 rm.slow_print(f"{rc.YELLOW}Critical {rc.LIGHT_WHITE}hit!{rc.END}")
                 sleep(0.8)
                 
+            print(f"{rc.LIGHT_GREEN}{self.name}{rc.DARK_GRAY} has retreated into the shadows...{rc.END} ")
+            
             # Checks the results of our attack
             self.attack_results(final_damage, damage, target)
             
-            print(f"{rc.LIGHT_GREEN}{self.name}{rc.DARK_GRAY}has retreated into the shadows...{rc.END} ")
             self.cloaked = True
             
         return hostile, aoe
@@ -605,7 +609,7 @@ class Warrior(unit):
     def Neutralise(self: object, target: object):
         """Armour-piercing attack that ignores 50% defence but does 90% damage"""
 
-        attack_sound = rpg_sound.sword_attack
+        attack_sound = rs.sword_attack
         
         hostile = True
         aoe = False
@@ -617,7 +621,7 @@ class Warrior(unit):
             
             # Change our attack sound if crit
             if crit_success:
-                attack_sound = rpg_sound.dagger_attack
+                attack_sound = rs.dagger_attack
             
             final_damage, target.health = self.do_damage(damage, target, int(target.defence / 2), 1, attack_sound, 1.2)
             rm.slow_print(f"Neutralising {target.name} with {rc.LIGHT_RED}{int(damage)}{rc.END} damage!")
@@ -635,7 +639,7 @@ class Warrior(unit):
     def Rage(self: object, target: object):
         """Sacrifice 10% health to do double damage"""
 
-        attack_sound = rpg_sound.rage
+        attack_sound = rs.rage
         
         hostile = True
         aoe = False
@@ -663,14 +667,14 @@ class Warrior(unit):
         """Deals more damage the lower the enemy health is.\n
         This attack cannot crit."""
 
-        attack_sound = rpg_sound.execute
+        attack_sound = rs.execute
         
         hostile = True
         aoe = False
 
         if target:
             
-            damage = self.attack * (0.25 * target.max_health / target.health)
+            damage = self.attack * (0.4 * target.max_health / target.health)
             
             final_damage, target.health = self.do_damage(damage, target, target.defence, 1, attack_sound, 0.8)
             rm.slow_print(f"{rc.DARK_GRAY}Executing{rc.END} {target.name} with {rc.LIGHT_RED}{int(damage)}{rc.END} damage!")
@@ -684,7 +688,7 @@ class Warrior(unit):
         """Leg sweep all enemies and deal damage based on their defence\n
         This attack cannot crit."""
         
-        attack_sound = rpg_sound.kick
+        attack_sound = rs.kick
         
         hostile = True
         aoe = True
@@ -693,16 +697,9 @@ class Warrior(unit):
             
             damage = target.defence + self.attack * 0.5
             
-            crit_success, damage = self.crit(damage)
-            
             final_damage, target.health = self.do_damage(damage, target, target.defence, 1, attack_sound, 1.2)
             rm.slow_print(f"Swept {target.name} for {rc.LIGHT_RED}{int(damage)}{rc.END} damage!")
-            
-            # I KNOW I'M REPEATING CODE THIS WAS A LAST MINUTE ADDITION SORRY
-            if crit_success:
-                rm.slow_print(f"{rc.YELLOW}Critical {rc.LIGHT_WHITE}hit!{rc.END}")
-                sleep(0.8)
-                
+
             # Checks the results of our attack
             self.attack_results(final_damage, damage, target)
             
@@ -718,7 +715,7 @@ class Tank(unit):
         self.char_class = "Tank"
         
         # Randomises initial stats
-        self.attack, self.defence = random.randrange(*T_BASE_ATK), random.randrange(*T_BASE_DEF)
+        self.attack, self.defence = random.randint(*T_BASE_ATK), random.randint(*T_BASE_DEF)
         
         # Saves the base stats for future calculations
         self.base_attack, self.base_defence = self.attack, self.defence
@@ -733,7 +730,7 @@ class Tank(unit):
         """Deals damage based on the difference between the character's attack and the enemy's defence. \n
         This attack cannot crit and is weak if the difference is small"""
         
-        attack_sound = rpg_sound.break_attack
+        attack_sound = rs.break_attack
         
         hostile = True
         aoe = False
@@ -753,9 +750,9 @@ class Tank(unit):
         return hostile, aoe
     
     def RecklessCharge(self, target: object):
-        """High damage attack with a 20% chance to miss"""
+        """A risky but powerful attack that has a 20% chance to miss"""
         
-        attack_sound = rpg_sound.break_attack
+        attack_sound = rs.break_attack
         
         hostile = True
         aoe = False
@@ -766,7 +763,7 @@ class Tank(unit):
             miss = random.randrange(5)
             
             if miss != 0:
-                damage = self.attack * 4
+                damage = self.attack * 3
                 
                 # Calculate crit
                 crit_success, damage = self.crit(damage)
@@ -788,7 +785,7 @@ class Tank(unit):
         return hostile, aoe
     
     def Barricade(self, target: object):
-        """Gives all allies the shielded state for damage reduction\n"""
+        """Gives all allies the shielded state for damage reduction"""
         
         hostile = False
         aoe = True
@@ -796,7 +793,7 @@ class Tank(unit):
         if target:
             if target.alive:    
                 target.shielded = True
-                arcade.play_sound(rpg_sound.shield, 0.6)
+                arcade.play_sound(rs.shield, 0.6)
                 rm.slow_print(f"Shielded {rc.LIGHT_GREEN}{target.name}{rc.END}!")
                 sleep(0.4)
             
@@ -810,7 +807,7 @@ class Cleric(unit):
     def __init__(self, name, team):
         super().__init__(name, team)
         self.char_class = "Cleric"
-        self.attack, self.defence = random.randrange(*C_BASE_ATK), random.randrange(*C_BASE_DEF)
+        self.attack, self.defence = random.randint(*C_BASE_ATK), random.randint(*C_BASE_DEF)
         self.base_attack, self.base_defence = self.attack, self.defence
         self.movelist.update(
                         {2: self.Lightning,
@@ -830,7 +827,7 @@ class Cleric(unit):
             
             damage = (self.attack * 0.85)
             
-            final_damage, target.health = self.do_damage(damage, target, target.defence, 1, rpg_sound.thunder_attack, 0.5)
+            final_damage, target.health = self.do_damage(damage, target, target.defence, 1, rs.thunder_attack, 0.5)
             print(f"Cast a {rc.YELLOW}lightning bolt{rc.END} on {target.name} for {rc.LIGHT_RED}{int(damage)}{rc.END} damage!")
             
             self.attack_results(final_damage, damage, target)
@@ -838,7 +835,7 @@ class Cleric(unit):
         return hostile, aoe
     
     def Restoration(self, target: object):
-        """Heals and revives an ally with healing magic."""
+        """Heals and revives an ally with magic."""
         
         hostile = False
         aoe = False
@@ -853,10 +850,10 @@ class Cleric(unit):
         return hostile, aoe
     
     def Curse(self, target: object):
-        """Uses the enemy's own attack to deal damage.\n
+        """Deals damage based on the enemy's attack.\n
         This attack cannot crit."""
         
-        attack_sound = rpg_sound.curse
+        attack_sound = rs.curse
         
         hostile = True
         aoe = False
@@ -879,7 +876,7 @@ class Cleric(unit):
         aoe = True
         
         if target:
-            arcade.play_sound(rpg_sound.poison)
+            arcade.play_sound(rs.poison)
             target.poisoned += 2
             print(f"{rc.LIGHT_RED}{target.name}{rc.END} is now{rc.LIGHT_PURPLE} poisoned {rc.END}for {rc.LIGHT_PURPLE}{target.poisoned}{rc.END} rounds!")
             sleep(0.6)

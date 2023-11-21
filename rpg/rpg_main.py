@@ -3,16 +3,16 @@ import random
 from time import sleep
 from time import perf_counter
 import arcade
-import rpg_sound
+import rpg_sound as rs
 import menus
+import screens
 import rpg_modules as rm
 import rpg_colours as rc
+import rpg_saveload as rsl
 
 # Initialising teams
 ais = {}
-alive_ais = {}
 players = {}
-alive_players = {}
 
 # Preparing stage defaults
 stage = 1
@@ -23,8 +23,8 @@ difficulties = ["easy", "normal", "hard"]
 difficulty = "easy"
 
 # Preparing team sizes
-default_player_team_size = 3 #default 3
-ai_team_size = 3 #default 3
+default_player_team_size = 3 # default is 3
+ai_team_size = 3 # default is 3
 ai_team_size_set = False
 
 # Misc.
@@ -37,59 +37,10 @@ sys.stdout = rm.logging_function()
 # Hide cursor
 rm.cursor(False)
 
-
-def player_victory_check(stage, highest_stage):
-    """Called during both turns to determine if the player has won;
-    does not check if AI has won because we do not expect to die on our turn
-    (This may be changed in future)"""
-    
-    alive_ais = 0
-    for k, char in ais.items():       
-        if char.alive:
-            alive_ais += 1
-            
-    if alive_ais == 0:
-        rm.stat_printer(players, ais)
-        arcade.play_sound(rpg_sound.win, 0.5 * rpg_sound.volume)
-        
-        # Saves highest stage
-        stage += 1
-        if highest_stage < stage:
-            highest_stage = stage
-               
-        # writes traits list into save file
-        save_file = f"saves/{player_name}.txt"
-        with open(save_file, "w") as f:
-            for k, char in players.items():
-
-                traits = [stage,
-                        highest_stage,
-                        char.char_class,
-                        char.name,
-                        char.max_health,
-                        char.attack,
-                        char.defence,
-                        char.exp,
-                        char.rank,
-                        char.prestige,
-                        char.total_rank
-                        ]
-                
-                for trait in traits:
-                    f.write(f"{trait}//")
-                
-                # Appends a debug checksum at the end to indicate the number of items
-
-                f.write(f"{len(traits) + 1}")
-                f.write("\n")
-
-        return f"{rc.LIGHT_GREEN}Player wins!{rc.END}"
-    return False
-
 # GAME START
 
 if play_bgm:
-    arcade.play_sound(rpg_sound.bgm, 0.2)
+    arcade.play_sound(rs.bgm, 0.2)
 
 game_running = True
 while game_running:
@@ -101,28 +52,23 @@ while game_running:
     game_exit = False
     winner = False
     game_round = 1
-        
-        
-    # Put this into menus.py PLEASE
-    start_game = False
-    while not start_game:
-        
-        menu_action = menus.main_menu()
-        if menu_action == "settings" or menu_action == "setting":
-            
-            (default_player_team_size, 
-            ai_team_size, 
-            ai_team_size_set, 
-            difficulty) = menus.settings(default_player_team_size, ai_team_size, difficulties, difficulty)
-        
-        elif menu_action == "start":
-            start_game = True
-            rm.slow_print(f"{rc.DARK_GRAY}Entering the forest... {rc.END}\n", sound = 0)
-            break
-
-    # INTRO
     
-    # Checks if player name is already set from previous round
+    # Initialising main menu class
+    mm = menus.MainMenu(default_player_team_size, ai_team_size, ai_team_size_set, difficulty, difficulties)    
+    
+    # Calling the start screen method
+    mm.start_screen()
+    
+    # Updating our variables from the properties stored in the class
+    default_player_team_size = mm.default_player_team_size
+    ai_team_size = mm.ai_team_size
+    ai_team_size_set = mm.ai_team_size_set
+    difficulty = mm.difficulty
+    
+    # Intro text
+    rm.slow_print(f"{rc.DARK_GRAY}Entering the forest... {rc.END}\n", sound = 0)
+    
+    # Checks if we're continuing from a previous round
     if "player_name" not in locals():
         rm.cursor()
         player_name = input(f"{rc.LIGHT_CYAN}Player name:{rc.END} ")
@@ -133,31 +79,19 @@ while game_running:
 
     # Attempts to load save file
     try:
-        players, highest_stage, loaded_stage = rm.load_game(player_name)
+        players, highest_stage, loaded_stage = rsl.load_game(player_name)
+        stage = rsl.stage_load(loaded_stage, highest_stage)
         new_game = False
         
     except:
         pass
-        
-    # Selects stage
-    if not new_game:
-        stage = rm.stage_load(loaded_stage, highest_stage)
     
     # Intro sound effect and art
-    arcade.play_sound(rpg_sound.intro, 1 * rpg_sound.volume)
-    rm.line_print(length = 60)
+    arcade.play_sound(rs.intro, 1 * rs.volume)
     
-    # Prints a house in the forest
-    rm.slow_print(f"\n\
-     {rc.GREEN}^  ^  ^   ^  {rc.END}  {rc.LIGHT_RED}    ___I_     {rc.GREEN} ^  ^   ^  ^  ^   ^  ^\n\
-    /|\/|\/|\ /|\  {rc.END}  {rc.LIGHT_RED}  /\-_--\    {rc.GREEN}/|\/|\ /|\/|\/|\ /|\/|\\\n\
-    /|\/|\/|\ /|\  {rc.END} {rc.LIGHT_RED}  /  \_-__\   {rc.GREEN}/|\/|\ /|\/|\/|\ /|\/|\\\n\
-    /|\/|\/|\ /|\  {rc.END} {rc.LIGHT_RED}  |{rc.RED}[]{rc.LIGHT_RED}| {rc.RED}[] {rc.LIGHT_RED}|  {rc.GREEN} /|\/|\ /|\/|\/|\ /|\/|\\\n\n\
-                  {rc.YELLOW}{rc.BOLD}    RPG GAME{rc.END}\n\
-             {rc.LIGHT_WHITE}{rc.FAINT} (Role-Playing game game){rc.END}", speed = 0.003, delay = 1, sound = False)
-    rm.line_print(length = 60)
-
-    arcade.play_sound(rpg_sound.start, 0.2 * rpg_sound.volume)
+    screens.alt_forest()
+    
+    arcade.play_sound(rs.start, 0.2 * rs.volume)
 
     # Check if this is a new game
     if new_game:
@@ -165,13 +99,13 @@ while game_running:
         
     else:
         print(f"{rc.LIGHT_BLUE}Save successfully loaded!{rc.END}")
-        sleep(0.8)
+        sleep(0.6)
         
     # AI CHARACTER CREATION
     
     if not ai_team_size_set:
         if stage != 1:
-            ai_team_size = random.choice([1, 2, 2, 2, 3, 3])
+            ai_team_size = random.choice([1, 2, 2, 2, 2, 3, 3, 3, 3, 4])
         
     ais = rm.char_create(ai_team_size, "AIs")
     
@@ -238,34 +172,44 @@ while game_running:
 #     P'
         rm.slow_print(f"[{rc.LIGHT_GREEN}PLAYER{rc.END} TURN]\n")
         
-        # Show enemy intent
-        ai_attacker, ai_target = rm.auto_target(ais, players)
-        print(f"{rc.LIGHT_RED}{ai_attacker.name}{rc.DARK_GRAY} is planning to attack {rc.LIGHT_GREEN}{ai_target.name}{rc.END}... ")
-
         # Temporarily store alive units
         alive_ais: dict = rm.create_alive_dict(ais)
+        alive_players:dict = rm.create_alive_dict(players)
+        
+        # Show enemy intent
+        ai_attacker, ai_target = rm.auto_target(alive_ais, alive_players)
+        print(f"{rc.LIGHT_RED}{ai_attacker.name}{rc.DARK_GRAY} is planning to attack {rc.LIGHT_GREEN}{ai_target.name}{rc.END}... ")
         
         # Player turn
         rm.status_check(players)
         menu.select()
         
-        # Check how many alive enemies are now dead
+        # Check how many alive characters are now dead
         print()
         rm.check_dead(alive_ais)
+        rm.check_dead(alive_players)
                 
         # Clear and prepare for next round
         alive_ais.clear()
+        alive_players.clear()
 
-        # Checks if AI is defeated
-        # Yeah I know we can just check the same alive dict but I'm not rewriting that ¯\_(ツ)_/¯
-        winner = player_victory_check(stage, highest_stage)
-        if winner:
-            print()
-            rm.slow_print(winner)
+        # Checks if all AI characters are dead
+        if not (rm.create_alive_dict(ais)):
+            rm.stat_printer(players, ais)
+            winner = rm.player_victory(player_name, players, stage, highest_stage)
             break
-
-        sleep(0.8)
-        rm.stat_printer(players, ais)
+        
+        # Then checks if all player characters are dead in case the AI has damage reflect or something
+        if not rm.create_alive_dict(players):
+            rm.stat_printer(players, ais)
+            arcade.play_sound(rs.lose, 0.7 * rs.volume)
+            winner = f"{rc.LIGHT_RED}AI wins!{rc.END}"
+            rm.slow_print(f"\n{winner}")
+            break
+        
+        else:
+            sleep(0.6)
+            rm.stat_printer(players, ais)
         
 # ----- AI TURN -----
         
@@ -290,18 +234,17 @@ while game_running:
 # $R@i.~~ !     :   ~$$$$$B$$en:``
 # ?MXT@Wx.~    :     ~"##*$$$$M~
 
-        rm.slow_print(f"[{rc.LIGHT_RED}AI{rc.END} TURN]")
+        rm.slow_print(f"[{rc.LIGHT_RED}AI{rc.END} TURN]\n")
+        
+        # Temporarily store alive units
+        alive_players: dict = rm.create_alive_dict(players)
+        alive_players: dict = rm.create_alive_dict(ais)
         
         # If the AI that was planning to attack us has died, reroll attacker and target
         rm.status_check(ais)
         if not ai_attacker.alive:
-            print(f"{rc.LIGHT_RED}{ai_attacker.name}{rc.DARK_GRAY} was defeated! {rc.RED}Selecting new targets...{rc.END}")
+            print(f"{rc.LIGHT_RED}{ai_attacker.name}{rc.DARK_GRAY} was defeated! {rc.RED}Selecting new targets...{rc.END}\n")
             ai_attacker, ai_target = rm.auto_target(ais, players)
-        
-        rm.slow_print("." * random.randint(3, 4), *rm.slower_print)
-        
-        # Temporarily store alive units
-        alive_players: dict = rm.create_alive_dict(players)
         
         # AI attacks
         ai_attacker.BasicAttack(ai_target)
@@ -309,31 +252,24 @@ while game_running:
         # Check how many have died after the attack
         print()
         rm.check_dead(alive_players)
+        rm.check_dead(alive_ais)
         
         # Clear alive players
         alive_players.clear()
+        alive_ais.clear()
         
-        # Create it again to check if there's anyone still alive
-        alive_players: dict = rm.create_alive_dict(players)
-        
-        # Checks if there is nobody alive in player team
-        if not alive_players:
+        # Checks if all player characters are dead
+        if not rm.create_alive_dict(players):
             rm.stat_printer(players, ais)
-            arcade.play_sound(rpg_sound.lose, 0.7 * rpg_sound.volume)
-            winner = f"{rc.RED}AI wins!{rc.END}"
-            print()
-            rm.slow_print(winner)
+            arcade.play_sound(rs.lose, 0.7 * rs.volume)
+            winner = f"{rc.LIGHT_RED}AI wins!{rc.END}"
+            rm.slow_print(f"\n{winner}")
             break
         
-        # Clear and prepare for next round
-        else:
-            alive_players.clear()
-        
-        # Checks if AI is defeated again in case it dies on its turn
-        winner = player_victory_check(stage, highest_stage)
-        if winner:
-            print()
-            rm.slow_print(winner)
+        # Then checks AI characters as well because player's damage reflect etc. might have killed them
+        if not (rm.create_alive_dict(ais)):
+            rm.stat_printer(players, ais)
+            winner = rm.player_victory(player_name, players, stage, highest_stage)
             break
         
     # Preparing for next round
@@ -353,11 +289,8 @@ while game_running:
     
     # Check if player wants to exit the game
     rm.cursor()
-    game_exit = input('Game saved. Press any key to exit or \"y\" to continue.\n').casefold().strip()
-    confirm = input(f"{rc.LIGHT_RED}ARE YOU SURE?{rc.END}\n")
     
-    if game_exit != "yes" and game_exit != "y" and confirm != "no" and confirm != "n":
-        print(f"\n{rc.LIGHT_WHITE}Thanks for playing!{rc.END}")
-        game_running = False
-
+    exit_menu = menus.ExitMenu()
+    game_running = exit_menu.exit_select()
+            
 sys.stdout.log.close()
