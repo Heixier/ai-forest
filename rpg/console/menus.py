@@ -31,7 +31,7 @@ class ManualTargetSelect:
                 self.select_target(self.selected_move)
                 
             if self.selected_attacker and self.selected_targets:
-                self.selection_complete = True           
+                self.selection_complete = True
                  
     def select_attacker(self):
         """Choose an alive character to perform an action"""

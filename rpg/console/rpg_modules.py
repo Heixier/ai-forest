@@ -247,7 +247,7 @@ def char_create(team_size: int, team: str):
             
             # Creates class based on selected class
             character = class_creator(char_class, name, team)
-            created_chars[char]: dict = character
+            created_chars[char] = character
     
     # If team is AIs we randomly generate
     elif team == "AIs":
@@ -257,7 +257,7 @@ def char_create(team_size: int, team: str):
             
             # Creates class based on selected class
             character = class_creator(char_class, name, team)
-            created_chars[char]: dict = character
+            created_chars[char] = character
                 
     return created_chars
 
@@ -309,7 +309,7 @@ def load_game(player_name: str):
                 character.attack = float(loaded_values[5])
                 character.defence = float(loaded_values[6])
                 character.exp = int(loaded_values[7])
-                character.rank: int = int(loaded_values[8])
+                character.rank = int(loaded_values[8])
                 character.prestige = int(loaded_values[9])
                 character.total_rank = int(loaded_values[10])
 
